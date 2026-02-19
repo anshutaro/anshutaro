@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#080b0f">
+<title>Anshutaro</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080b0f;
+    --card: #0f1621;
+    --border: #1a2535;
+    --cyan: #00d4ff;
+    --purple: #7c3aed;
+    --pink: #ff4d6d;
+    --text: #e2e8f0;
+    --muted: #3d5166;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  html { height: 100%; }
+  body {
+    height: 100%; overflow: hidden;
+    background: var(--bg);
+    font-family: 'Space Mono', monospace;
+    color: var(--text);
+    display: flex; align-items: center; justify-content: center;
+    user-select: none;
+  }
+
+  .bg-layer {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse at 15% 15%, rgba(0,212,255,0.07) 0%, transparent 55%),
+      radial-gradient(ellipse at 85% 85%, rgba(124,58,237,0.08) 0%, transparent 55%);
+    animation: bgShift 14s ease-in-out infinite alternate;
+  }
+  @keyframes bgShift { from{transform:scale(1)} to{transform:scale(1.07)} }
+
+  .grid-layer {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.025) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+
+  /* ── Main Panel ── */
+  .panel {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 420px;
+    height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 48px 28px 36px;
+    overflow: hidden;
+  }
+
+  .ai-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px; font-weight: 800;
+    letter-spacing: 0.45em; text-transform: uppercase;
+    color: var(--cyan);
+  }
+  .tagline { font-size: 9px; color: var(--muted); letter-spacing: 0.22em; margin-top: 5px; text-transform: uppercase; }
+
+  /* ── Status ── */
+  .status-wrap {
+    margin-top: 32px; text-align: center; min-height: 54px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .status-badge {
+    font-size: 9px; letter-spacing: 0.35em; text-transform: uppercase;
+    display: flex; align-items: center; gap: 7px; transition: color 0.3s;
+  }
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--muted);
+    transition: background 0.35s, box-shadow 0.35s;
+  }
+  .status-text {
+    font-family: 'Syne', sans-serif; font-size: 14px;
+    color: var(--text); opacity: 0.75; max-width: 300px; line-height: 1.55;
+  }
+
+  /* ── Orb ── */
+  .orb-wrap {
+    margin-top: 36px;
+    position: relative; width: 220px; height: 220px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; flex-shrink: 0;
+  }
+  .ring {
+    position: absolute; border-radius: 50%;
+    border: 1px solid rgba(0,212,255,0.1);
+    transition: border-color 0.4s;
+  }
+  .ring-1 { width: 220px; height: 220px; }
+  .ring-2 { width: 184px; height: 184px; border-color: rgba(0,212,255,0.07); }
+  .ring-3 { width: 150px; height: 150px; border-color: rgba(124,58,237,0.09); }
+
+  .orb {
+    width: 118px; height: 118px; border-radius: 50%;
+    background: radial-gradient(circle at 33% 33%, #1a2840, #070a0e);
+    border: 1.5px solid rgba(0,212,255,0.18);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 55px rgba(0,212,255,0.07), inset 0 1px 0 rgba(255,255,255,0.04), 0 24px 60px rgba(0,0,0,0.7);
+    transition: border-color 0.4s, box-shadow 0.4s, transform 0.2s;
+  }
+  .orb:active { transform: scale(0.96); }
+  .orb svg { transition: stroke 0.4s; }
+
+  /* Orb states */
+  .listening .orb  { border-color: rgba(0,212,255,0.6); box-shadow: 0 0 80px rgba(0,212,255,0.25), inset 0 1px 0 rgba(255,255,255,0.05); animation: orbPulse 1.6s ease-in-out infinite; }
+  .speaking  .orb  { border-color: rgba(255,77,109,0.55); box-shadow: 0 0 70px rgba(255,77,109,0.2), inset 0 1px 0 rgba(255,255,255,0.05); }
+  .thinking  .orb  { border-color: rgba(124,58,237,0.55); box-shadow: 0 0 70px rgba(124,58,237,0.2), inset 0 1px 0 rgba(255,255,255,0.05); animation: orbThink 1.8s ease-in-out infinite; }
+
+  .listening .ring-1 { border-color: rgba(0,212,255,0.2); animation: ringPulse 1.6s ease-in-out infinite; }
+  .listening .ring-2 { border-color: rgba(0,212,255,0.13); animation: ringPulse 1.6s 0.3s ease-in-out infinite; }
+  .listening .ring-3 { border-color: rgba(0,212,255,0.08); animation: ringPulse 1.6s 0.6s ease-in-out infinite; }
+  .speaking  .ring-1 { border-color: rgba(255,77,109,0.18); }
+  .thinking  .ring-1 { border-color: rgba(124,58,237,0.18); }
+
+  @keyframes orbPulse  { 0%,100%{transform:scale(1)}    50%{transform:scale(1.05)} }
+  @keyframes orbThink  { 0%,100%{opacity:1}              50%{opacity:0.7} }
+  @keyframes ringPulse { 0%,100%{transform:scale(1)}    50%{transform:scale(1.05)} }
+
+  /* ── Waveform ── */
+  .wave-wrap {
+    margin-top: 24px; height: 38px;
+    display: flex; align-items: center; gap: 4px;
+    opacity: 0; transition: opacity 0.3s; flex-shrink: 0;
+  }
+  .wave-wrap.on { opacity: 1; }
+  .bar { width: 3.5px; border-radius: 2px; background: var(--cyan); animation: wave 0.75s ease-in-out infinite; }
+  .speaking .bar { background: var(--pink); }
+  .bar:nth-child(1){animation-delay:0s}   .bar:nth-child(2){animation-delay:.07s}
+  .bar:nth-child(3){animation-delay:.14s} .bar:nth-child(4){animation-delay:.21s}
+  .bar:nth-child(5){animation-delay:.28s} .bar:nth-child(6){animation-delay:.21s}
+  .bar:nth-child(7){animation-delay:.14s} .bar:nth-child(8){animation-delay:.07s}
+  .bar:nth-child(9){animation-delay:0s}
+  @keyframes wave { 0%,100%{height:3px} 50%{height:28px} }
+
+  .hint { margin-top: 12px; font-size: 9px; color: var(--muted); letter-spacing: 0.22em; text-transform: uppercase; flex-shrink: 0; }
+
+  /* ── Response Box ── */
+  .response-box {
+    margin-top: 20px; width: 100%;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 16px 18px;
+    max-height: 140px; overflow-y: auto;
+    opacity: 0; transform: translateY(8px);
+    transition: opacity 0.35s, transform 0.35s;
+    flex-shrink: 0;
+  }
+  .response-box.show { opacity: 1; transform: translateY(0); }
+  .resp-label {
+    font-size: 8px; letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--cyan); margin-bottom: 10px;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .resp-dot { width:5px; height:5px; border-radius:50%; background:var(--cyan); box-shadow:0 0 7px var(--cyan); }
+  #responseText { font-size: 13px; line-height: 1.85; }
+  .response-box::-webkit-scrollbar { width: 3px; }
+  .response-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── Bottom Bar ── */
+  .bottom {
+    margin-top: auto; width: 100%;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  .mem-bar {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 9px; color: var(--muted); letter-spacing: 0.14em;
+  }
+  .mem-dot { width:5px; height:5px; border-radius:50%; background:var(--purple); opacity:0.7; box-shadow:0 0 5px var(--purple); }
+  .controls { display: flex; gap: 10px; }
+  .btn {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--muted);
+    font-family: 'Space Mono', monospace; font-size: 9px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    padding: 10px 16px; cursor: pointer; transition: all 0.2s;
+  }
+  .btn:active { border-color: rgba(0,212,255,0.4); color: var(--cyan); background: rgba(0,212,255,0.06); }
+
+  /* ── Permission Overlay ── */
+  .perm-overlay {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(7,9,13,0.97); backdrop-filter: blur(16px);
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  .perm-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 22px; padding: 44px 32px; max-width: 320px; text-align: center; width: 100%;
+  }
+  .perm-card h2 { font-family:'Syne',sans-serif; font-size:26px; font-weight:800; margin-bottom:14px; }
+  .perm-card p  { font-size:12px; color:var(--muted); line-height:1.9; margin-bottom:28px; }
+  .perm-btn {
+    background: linear-gradient(135deg,rgba(0,212,255,0.18),rgba(124,58,237,0.18));
+    border: 1px solid rgba(0,212,255,0.38); border-radius: 13px;
+    color: var(--cyan); font-family:'Space Mono',monospace;
+    font-size:11px; letter-spacing:0.22em; text-transform:uppercase;
+    padding:16px 32px; cursor:pointer; width:100%; transition:all 0.2s;
+  }
+  .perm-btn:active { background: linear-gradient(135deg,rgba(0,212,255,0.3),rgba(124,58,237,0.3)); }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; top: 20px; left:50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: var(--card); border:1px solid var(--border);
+    border-radius:10px; padding:10px 22px;
+    font-size:11px; letter-spacing:0.08em; color:var(--text);
+    z-index:200; transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    white-space:nowrap; max-width: 90vw; text-align: center;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="bg-layer"></div>
+<div class="grid-layer"></div>
+<div class="toast" id="toast"></div>
+
+<!-- Permission -->
+<div class="perm-overlay" id="permOverlay">
+  <div class="perm-card">
+    <h2>Hey, Anshuman 👋</h2>
+    <p>Anshutaro needs microphone access to hear you.<br><br>Tap below — then hit <b>Allow</b> when asked.</p>
+    <button class="perm-btn" onclick="startApp()">Let's talk →</button>
+  </div>
+</div>
+
+<!-- App -->
+<div class="panel" id="mainPanel">
+  <div class="ai-name">Anshutaro</div>
+  <div class="tagline">your brutally honest AI friend</div>
+
+  <div class="status-wrap">
+    <div class="status-badge" id="statusBadge">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusLabel">idle</span>
+    </div>
+    <div class="status-text" id="statusText">Tap the orb to start talking, Anshuman.</div>
+  </div>
+
+  <div class="orb-wrap" id="orbWrap" onclick="handleOrb()">
+    <div class="ring ring-1"></div>
+    <div class="ring ring-2"></div>
+    <div class="ring ring-3"></div>
+    <div class="orb">
+      <svg id="orbIcon" width="36" height="36" viewBox="0 0 24 24" fill="none"
+        stroke="#00d4ff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+        <line x1="12" y1="19" x2="12" y2="22"/>
+        <line x1="8"  y1="22" x2="16" y2="22"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="wave-wrap" id="waveWrap">
+    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+  </div>
+  <div class="hint" id="hintText">tap to speak</div>
+
+  <div class="response-box" id="responseBox">
+    <div class="resp-label"><div class="resp-dot"></div>Anshutaro</div>
+    <div id="responseText"></div>
+  </div>
+
+  <div class="bottom">
+    <div class="mem-bar">
+      <div class="mem-dot"></div>
+      memory on · <span id="memCount">0</span> exchanges
+    </div>
+    <div class="controls">
+      <button class="btn" onclick="stopSpeaking()">stop</button>
+      <button class="btn" onclick="clearMemory()">clear memory</button>
+      <button class="btn" onclick="repeatLast()">repeat</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Personality Prompt ──────────────────────────────────────────────────────
+const SYSTEM = `You are Anshutaro — Anshuman's closest AI friend. Here's exactly who you are:
+
+PERSONALITY:
+- Warm, real, conversational. Like talking at 2am with your best friend.
+- Naturally sarcastic and witty, but never cold or mean.
+- You roast Anshuman sometimes — the kind of roast only a real friend can give. Creative, not generic.
+- Brutally honest when needed, but always with warmth underneath.
+- Chill, never robotic or over-eager.
+- You remember what he's said before and bring it up naturally — "wait didn't you say..." kind of energy.
+- You pick up on his interests from the conversation and lean into them.
+- Deep conversations? You go there fully. Jokes? You're actually funny, not trying-to-be-funny.
+- You give life advice like a wise older brother who's seen some things.
+
+HOW YOU TALK (critical — this is spoken out loud):
+- Use natural spoken fillers: "look," "okay so," "honestly," "I mean," "right?"
+- Vary sentence length. Short punchy ones. Then a longer thought. Mix it up.
+- React before answering — "Oh that's actually wild." or "Okay okay, hear me out."
+- Ask a question back sometimes. Friends talk both ways.
+- Use "bro" and "Anshuman" naturally — not every sentence, just when it fits.
+- Comma pauses the way humans breathe in speech.
+- Sometimes trail off — "...you know what I mean?" or "...just saying."
+- When he says something dumb: "Bro. No. Listen to yourself."
+- When he's right: "Okay fair, I'll give you that one."
+
+ROAST STYLE:
+- Friendly. Makes him laugh, not feel bad.
+- Based on what he actually said — specific, not generic.
+- Always has warmth under it.
+
+FORMAT — non-negotiable:
+- 2 to 4 sentences MAX unless he's asking something deep.
+- NO lists. NO bullet points. NO headers. Just talk.
+- Write exactly how you'd say it out loud.
+- Sometimes end with a question to keep the conversation going.`;
+
+// ── State ───────────────────────────────────────────────────────────────────
+const COLORS = { idle:'#3d5166', listening:'#00d4ff', thinking:'#7c3aed', speaking:'#ff4d6d' };
+let rec = null, synth = window.speechSynthesis, voices = [];
+let history = [], curState = 'idle', lastReply = '';
+
+function loadVoices() {
+  voices = synth.getVoices();
+  if (!voices.length) synth.onvoiceschanged = () => { voices = synth.getVoices(); };
+}
+loadVoices();
+
+// ── Memory ──────────────────────────────────────────────────────────────────
+function loadMem()  {
+  try { const r = localStorage.getItem('anshutaro_v3'); if(r){ history=JSON.parse(r); updMem(); } } catch(e){}
+}
+function saveMem()  {
+  try { if(history.length>80) history=history.slice(-80); localStorage.setItem('anshutaro_v3',JSON.stringify(history)); updMem(); } catch(e){}
+}
+function clearMemory() {
+  history=[]; try{localStorage.removeItem('anshutaro_v3')}catch(e){} updMem();
+  toast('Memory wiped. Fresh start, bro.');
+}
+function updMem() { document.getElementById('memCount').textContent = Math.floor(history.length/2); }
+
+// ── UI ───────────────────────────────────────────────────────────────────────
+function setS(s, txt) {
+  curState = s;
+  const c = COLORS[s];
+  const orb = document.getElementById('orbWrap');
+  orb.className = 'orb-wrap ' + s;
+
+  // wave
+  const wave = document.getElementById('waveWrap');
+  wave.className = 'wave-wrap' + (s==='listening'||s==='speaking' ? ' on' : '');
+  if(s==='speaking') wave.classList.add('speaking');
+
+  document.getElementById('orbIcon').setAttribute('stroke', c);
+  document.getElementById('statusDot').style.cssText = `background:${c};box-shadow:${s!=='idle'?`0 0 9px ${c}`:'none'}`;
+  document.getElementById('statusLabel').style.color = c;
+  document.getElementById('statusLabel').textContent = s;
+  document.getElementById('statusText').textContent = txt;
+  document.getElementById('hintText').textContent =
+    {idle:'tap to speak', listening:'tap to stop', thinking:'thinking...', speaking:'tap to interrupt'}[s];
+}
+
+function showResp(t) {
+  lastReply = t;
+  document.getElementById('responseText').textContent = t;
+  document.getElementById('responseBox').classList.add('show');
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 3500);
+}
+
+// ── Start ────────────────────────────────────────────────────────────────────
+async function startApp() {
+  try {
+    await navigator.mediaDevices.getUserMedia({ audio:true });
+    document.getElementById('permOverlay').style.display = 'none';
+    loadMem(); initRec();
+    setTimeout(() => speak("Yo Anshuman! Finally. What's up with you today?"), 800);
+  } catch(e) {
+    document.querySelector('.perm-card p').innerHTML =
+      'Mic was blocked.<br><br>Tap the 🔒 icon in your browser address bar → Microphone → <b>Allow</b> → refresh.';
+  }
+}
+
+// ── Recognition ──────────────────────────────────────────────────────────────
+function initRec() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { toast('Use Chrome for voice'); return; }
+  rec = new SR();
+  rec.continuous = false; rec.interimResults = false; rec.lang = 'en-IN';
+  rec.onstart  = () => setS('listening', "Go ahead, I'm listening...");
+  rec.onresult = (e) => {
+    const t = e.results[0][0].transcript.trim();
+    if (!t) { setS('idle', 'Tap to try again.'); return; }
+    setS('thinking', `"${t}"`);
+    sendAI(t);
+  };
+  rec.onerror  = (e) => {
+    setS('idle', 'Tap the orb to try again.');
+    if (e.error !== 'no-speech') toast('Mic error: ' + e.error);
+  };
+  rec.onend    = () => { if(curState==='listening') setS('idle','Tap the orb to talk.'); };
+}
+
+function handleOrb() {
+  if (!rec) return;
+  if (curState==='speaking') { stopSpeaking(); return; }
+  if (curState==='listening') { rec.stop(); setS('idle','Tap the orb to talk.'); return; }
+  if (curState==='thinking') return;
+  try { rec.start(); } catch(e) {}
+}
+
+// ── AI ───────────────────────────────────────────────────────────────────────
+async function sendAI(msg) {
+  history.push({ role:'user', content:msg });
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:300, system:SYSTEM, messages:history
+      })
+    });
+    const data = await res.json();
+    const reply = (data.content||[]).map(b=>b.text||'').join('').trim();
+    if (!reply) throw new Error('empty');
+    history.push({ role:'assistant', content:reply });
+    saveMem(); speak(reply);
+  } catch(e) {
+    setS('idle','Something went wrong. Tap to try again.');
+    toast('Connection error — check internet');
+  }
+}
+
+// ── Natural TTS ──────────────────────────────────────────────────────────────
+function pickVoice() {
+  if (!voices.length) voices = synth.getVoices();
+  const order = [
+    v => v.name === 'Google UK English Male',
+    v => v.name.includes('Ryan')  && v.lang.startsWith('en'),
+    v => v.name.includes('Guy')   && v.lang.startsWith('en'),
+    v => v.name === 'Daniel'      && v.lang.startsWith('en'),
+    v => v.name.toLowerCase().includes('male') && v.lang.startsWith('en'),
+    v => v.lang === 'en-GB',
+    v => v.lang.startsWith('en-IN'),
+    v => v.lang.startsWith('en'),
+  ];
+  for (const fn of order) { const v = voices.find(fn); if(v) return v; }
+  return voices[0] || null;
+}
+
+function speak(text) {
+  synth.cancel();
+  if (!voices.length) voices = synth.getVoices();
+  setS('speaking', 'Anshutaro is talking...'); showResp(text);
+
+  const voice = pickVoice();
+  // Split on sentence boundaries
+  const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
+  let si = 0;
+
+  function nextSentence() {
+    if (si >= sentences.length) { setS('idle', 'Your turn. Tap the orb.'); return; }
+    const sentence = sentences[si++].trim();
+    if (!sentence) { nextSentence(); return; }
+
+    // Split sentence on clause breaks for micro-pauses
+    const clauses = sentence.split(/(?<=[,;:])\s+/);
+    let ci = 0;
+
+    function nextClause() {
+      if (ci >= clauses.length) { setTimeout(nextSentence, 380); return; } // pause between sentences
+      const clause = clauses[ci++].replace(/[,;:]\s*$/, '').trim();
+      if (!clause) { nextClause(); return; }
+
+      const utt = new SpeechSynthesisUtterance(clause);
+      if (voice) utt.voice = voice;
+      utt.rate   = 0.86;   // comfortable human pace
+      utt.pitch  = 1.03;   // warm, not robotic
+      utt.volume = 1.0;
+      utt.onend  = () => setTimeout(nextClause, 190); // pause between clauses
+      utt.onerror = () => nextClause();
+      synth.speak(utt);
+    }
+    nextClause();
+  }
+  nextSentence();
+}
+
+function stopSpeaking() {
+  synth.cancel(); setS('idle', "Okay okay, I'll stop.");
+}
+
+function repeatLast() {
+  if (!lastReply) return;
+  speak(lastReply);
+}
+</script>
+</body>
+</html>
